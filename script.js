@@ -696,7 +696,12 @@ window.setupPuzzle12 = function() {
     // centro. Com width = height, a área visível do SVG é exatamente igual à
     // área usada no cálculo de coordenadas, e a sonda passa a alcançar o
     // quadrado inteiro.
-    svgEl.style.cssText = 'background:radial-gradient(circle, rgba(255,255,255,0.02), transparent); border:1px solid var(--border); cursor:crosshair; touch-action:none; border-radius:4px; width:420px; height:420px; max-width:100%;';
+    // O tamanho do elemento na tela é responsivo (sempre quadrado, usando a
+    // mesma medida para width e height via clamp/min), então em telas
+    // menores ele encolhe e cabe na tela; em telas grandes não passa de
+    // 420px. Continua batendo com a proporção quadrada do viewBox, então a
+    // conversão de coordenadas do mouse permanece correta em qualquer tamanho.
+    svgEl.style.cssText = 'background:radial-gradient(circle, rgba(255,255,255,0.02), transparent); border:1px solid var(--border); cursor:crosshair; touch-action:none; border-radius:4px; width:min(420px, 80vw, 50vh); height:min(420px, 80vw, 50vh); aspect-ratio:1/1;';
 
     const statusMsg = document.createElement('div');
     statusMsg.style.cssText = 'font-family:var(--font-mono);font-size:0.66rem;color:var(--text-mid);text-align:center;min-height:1.8rem;letter-spacing:1px;line-height:1.4;';
@@ -763,6 +768,8 @@ window.setupPuzzle12 = function() {
         html+='<circle cx="'+cx+'" cy="'+cy+'" r="'+coreR.toFixed(1)+'" fill="url(#p12CoreGrad)"></circle>';
         rings.forEach((ring,idx)=>{
             const isActive=idx===currentLayer,segs=48,op=isActive?0.95:(idx<currentLayer?0.1:0.4),col=idx<currentLayer?'#5F5E5A':(isActive?'#D85A30':'#888780');
+            for(let i=0;i<segs;i++){const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2,mid=(a1+a2)/
+const isActive=idx===currentLayer,segs=48,op=isActive?0.95:(idx<currentLayer?0.1:0.4),col=idx<currentLayer?'#5F5E5A':(isActive?'#D85A30':'#888780');
             for(let i=0;i<segs;i++){const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2,mid=(a1+a2)/2;if(angleDiff(mid,ring.gapAngle)<ring.gapWidth/2)continue;const x1=cx+ring.radius*Math.cos(a1),y1=cy+ring.radius*Math.sin(a1),x2=cx+ring.radius*Math.cos(a2),y2=cy+ring.radius*Math.sin(a2);html+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="5" opacity="'+op+'"></line>';}
             if(isActive){const gx=cx+ring.radius*Math.cos(ring.gapAngle),gy=cy+ring.radius*Math.sin(ring.gapAngle);html+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="11" fill="#1D9E75" opacity="0.18"></circle>';}
         });
