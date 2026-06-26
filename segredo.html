@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeria</title>
+    <link rel="stylesheet" href="segredo.css">
+</head>
+<body>
+
+    <header class="site-header">
+        <h1 class="site-title">Galeria</h1>
+        <p class="site-subtitle">Fotos do nosso amado curso!</p>
+    </header>
+
+    <main class="categories-wrapper">
+
+        <!-- CATEGORIA 1: Jefferson (11 fotos, arquivos G1–G11) -->
+        <a href="jj.html" class="category-card" id="card-jefferson"
+           data-name="Fotos do Jefferson"
+           data-images='["G1.jpeg","G2.jpeg","G3.jpeg","G4.jpeg","G5.jpeg","G6.jpeg","G7.jpeg","G8.jpeg","G9.jpeg","G11.png","G11.jpeg"]'>
+
+            <div class="card-cover">
+                <!-- Imagem de capa: usa a primeira foto da categoria como placeholder -->
+                <img src="G1.jpeg" alt="Capa Jefferson" class="cover-img" onerror="this.style.display='none'">
+                <div class="cover-fallback">JJ</div>
+            </div>
+
+            <div class="card-overlay">
+                <span class="card-label">Fotos do Jefferson</span>
+            </div>
+
+            <!-- Slideshow de preview (roda no hover) -->
+            <div class="slideshow-preview" aria-hidden="true"></div>
+        </a>
+
+        <!-- CATEGORIA 2: Categoria F (43 fotos, arquivos F1–F43) -->
+        <a href="categoria-f.html" class="category-card" id="card-f"
+           data-name="Fotos do nosso semestre"
+           data-images='["F1.jpg","F2.jpg","F3.jpg","F4.jpg","F5.jpg","F6.jpg","F7.jpg","F8.jpg","F9.jpg","F10.jpg","F11.jpg","F12.jpg"]'>
+
+            <div class="card-cover">
+                <img src="F1.jpg" alt="Capa Coleção F" class="cover-img" onerror="this.style.display='none'">
+                <div class="cover-fallback">F</div>
+            </div>
+
+            <div class="card-overlay">
+                <span class="card-label">Fotos do nosso semestre</span>
+            </div>
+
+            <div class="slideshow-preview" aria-hidden="true"></div>
+        </a>
+
+    </main>
+
+    <footer class="nav-footer">
+        <a href="index.html" class="btn-restart">Reiniciar Experiencia</a>
+    </footer>
+
+    <script src="segredo.js"></script>
+</body>
+</html>
+s

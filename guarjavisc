@@ -1,0 +1,1013 @@
+/**
+ * SISTEMA VIVO — JOGO DE PUZZLES RECONFIGURADO (VERSÃO TEMPERATURA)
+ */
+
+// ==========================================================================
+// MOTOR DE ÁUDIO
+// ==========================================================================
+const AudioEngine = {
+    ctx: null,
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    play(freq, duration, type = 'sine', vol = 0.03) {
+        this.init(); if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, this.ctx.currentTime + duration);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(); osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+    }
+};
+
+// ==========================================================================
+// NARRATIVA — LISTA ATUALIZADA E REINDEXADA
+// ==========================================================================
+const NARRATIVA = {
+    puzzles: [
+        { id: 1,  sub: "Camada 1: Dinâmica de Impulso" },
+        { id: 2,  sub: "Camada 2: Rastro Invisível" },
+        { id: 3,  sub: "Camada 2: Estado de Inércia Estendida" },
+        { id: 4,  sub: "Camada 3: Desvio de Foco" },
+        { id: 5,  sub: "Camada 3: Reflexo Superior" },
+        { id: 6,  sub: "Camada 3: Obscuridade Estática" },
+        { id: 7,  sub: "Camada 4: Ponto Cego" },
+        { id: 8,  sub: "Camada 4: Sequência de Memória" },
+        { id: 9,  sub: "Camada 5: Fragmentação Sequencial" },
+        { id: 10, sub: "Camada 5: Sincronia de Clima Local" }, // CORRIGIDO: removido "Tolerar" solto
+        { id: 11, sub: "Camada 5: O Enigma da Dimensão Contraída" },
+        { id: 12, sub: "Camada Final: O Paradoxo do Eco" }
+    ]
+};
+
+// ==========================================================================
+// SISTEMA EMOCIONAL
+// ==========================================================================
+const Emocao = {
+    mapa: [
+        { range:[1,2],   nome:'provocador',  label:'PROVOCADOR',  boca:'>:)', falas:["Achei que você fosse mais rápido.","Continua tentando."] },
+        { range:[3,4],   nome:'brincalhao',  label:'BRINCALHÃO',  boca:':p',  falas:["Ops! Errou de novo?","Vou contar as tentativas."] },
+        { range:[5,6],   nome:'competitivo', label:'COMPETITIVO', boca:'>_<', falas:["Impressionante. Mas não suficiente."] },
+        { range:[7,8],   nome:'irritado',    label:'IRRITADO',    boca:'>:(', falas:["Isso começa a me irritar de verdade."] },
+        { range:[9,10],  nome:'cansado',     label:'CANSADO',     boca:'-_-', falas:["Você ainda está aqui. Ok."] },
+        { range:[11,12], nome:'sincero',     label:'SINCERO',     boca:'._.', falas:["Ok. Você me surpreendeu."] }
+    ],
+    modosVelocidade: {
+        rapido: { nome:'arrogante', label:'MODO: ARROGANTE', falas:["Velocidade não é inteligência."] },
+        lento:  { nome:'empatico',  label:'MODO: EMPÁTICO',  falas:["Ei... tudo bem. Respira."] }
+    },
+    atual: null, modoVelocidade: null,
+    getEstado(p) { return this.mapa.find(m => p >= m.range[0] && p <= m.range[1]) || this.mapa[0]; },
+    aplicar(p) {
+        const e = this.getEstado(p);
+        if (this.atual === e.nome) return;
+        this.atual = e.nome;
+        document.body.className = document.body.className.split(' ').filter(c => !c.startsWith('emocao-')).join(' ');
+        document.body.classList.add('emocao-' + e.nome);
+        const lbl = document.getElementById('emocao-label'); if (lbl) lbl.textContent = 'MODO: ' + e.label;
+        const boca = document.getElementById('face-mouth'); if (boca) boca.textContent = e.boca;
+        const fala = e.falas[Math.floor(Math.random() * e.falas.length)];
+        setTimeout(() => Balao.mostrar(fala), 900);
+    },
+    aplicarVelocidade(tipo) {
+        const m = this.modosVelocidade[tipo]; if (!m) return;
+        this.modoVelocidade = tipo;
+        document.body.classList.remove('emocao-arrogante','emocao-empatico');
+        document.body.classList.add('emocao-' + m.nome);
+        const lbl = document.getElementById('emocao-label'); if (lbl) lbl.textContent = m.label;
+        Balao.mostrar(m.falas[Math.floor(Math.random() * m.falas.length)]);
+    }
+};
+
+// ==========================================================================
+// BALÃO DE FALA
+// ==========================================================================
+const Balao = {
+    el: null, textEl: null, timerF: null, digitT: null,
+    init() {
+        this.el = document.getElementById('speech-bubble');
+        this.textEl = document.getElementById('bubble-text');
+        const bc = document.getElementById('bubble-close'); if (bc) bc.addEventListener('click', () => this.esconder());
+    },
+    mostrar(texto, dur = 5000) {
+        if (!this.el || !this.textEl) return;
+        clearTimeout(this.timerF); clearTimeout(this.digitT);
+        this.el.classList.remove('hidden');
+        this.textEl.textContent = ''; let i = 0;
+        const run = () => { if (i < texto.length) { this.textEl.textContent += texto[i++]; this.digitT = setTimeout(run, 22); } };
+        run(); this.timerF = setTimeout(() => this.esconder(), dur);
+    },
+    esconder() {
+        if (!this.el) return;
+        this.el.classList.add('hidden');
+    }
+};
+
+// ==========================================================================
+// MOTOR CENTRAL DE JOGO
+// ==========================================================================
+const estado_jogo = { puzzleAtual:1, errosNoPuzzle:0, tempoInicio:null, resolvidosRapido:0 };
+
+const txtEntidade    = document.getElementById('entidade-texto');
+const subtxtEntidade = document.getElementById('entidade-subtexto');
+const zonaInteracao  = document.getElementById('interaction-zone');
+const barraProgresso = document.getElementById('progress-bar');
+const txtStatus      = document.getElementById('status-text');
+const containerApp   = document.getElementById('app-container');
+const landingScreen  = document.getElementById('landing-screen');
+
+let timeoutDigitacao = null; let timerVelocidade = null; let timersDica = [];
+
+function digitar(el, texto, vel = 22, cb = null) {
+    if (timeoutDigitacao) clearTimeout(timeoutDigitacao);
+    if (!el) return; el.textContent = '';
+    let i = 0;
+    function run() {
+        if (i < texto.length) { el.textContent += texto[i++]; timeoutDigitacao = setTimeout(run, vel); }
+        else { timeoutDigitacao = null; if (cb) cb(); }
+    }
+    run();
+}
+
+function atualizarStatus(pct, txt) {
+    if (barraProgresso) { barraProgresso.style.width = pct + '%'; }
+    if (txtStatus) txtStatus.textContent = txt;
+}
+
+function ativarDicaComDelay(el, delay = 10000) {
+    const t = setTimeout(() => { if (el && el.parentNode) el.classList.add('visivel'); }, delay);
+    timersDica.push(t);
+}
+
+function cancelarTimersDica() { timersDica.forEach(t => clearTimeout(t)); timersDica = []; }
+
+function iniciarTimerPuzzle() {
+    estado_jogo.tempoInicio = Date.now(); clearTimeout(timerVelocidade);
+    timerVelocidade = setTimeout(() => {
+        Emocao.aplicarVelocidade('lento');
+        document.querySelectorAll('.dica-empatica:not(.visivel)').forEach(d => d.classList.add('visivel'));
+    }, 45000);
+}
+
+function registrarErro(max = 1) {
+    estado_jogo.errosNoPuzzle++;
+    if (estado_jogo.errosNoPuzzle >= max) {
+        AudioEngine.play(100, 0.6, 'sawtooth', 0.08);
+        estado_jogo.puzzleAtual = 1; estado_jogo.errosNoPuzzle = 0;
+        if(containerApp) containerApp.classList.add('hidden');
+        if(landingScreen) landingScreen.classList.remove('hidden');
+        return true;
+    }
+    AudioEngine.play(150, 0.15, 'triangle', 0.05);
+    return false;
+}
+
+function proximoPuzzle() {
+    estado_jogo.puzzleAtual++; estado_jogo.errosNoPuzzle = 0;
+    renderizarPuzzle();
+}
+
+function renderizarPuzzle() {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    cancelarTimersDica();
+    if (!zonaInteracao) return;
+    zonaInteracao.innerHTML = '';
+
+    if (estado_jogo.puzzleAtual > 12) { renderizarGaleriaFinal(); return; }
+
+    const info = NARRATIVA.puzzles[estado_jogo.puzzleAtual - 1];
+    subtxtEntidade.textContent = info.sub + ' | Fragmento ' + info.id + '/12';
+    const pct = Math.floor(((estado_jogo.puzzleAtual - 1) / 12) * 100);
+    atualizarStatus(pct, 'Decodificando barreira ' + estado_jogo.puzzleAtual + '...');
+    Emocao.aplicar(estado_jogo.puzzleAtual);
+    iniciarTimerPuzzle();
+    
+    window['setupPuzzle' + estado_jogo.puzzleAtual]();
+}
+
+// ==========================================================================
+// IMPLEMENTAÇÃO DOS PUZZLES INDIVIDUAIS (1 ATÉ 12)
+// ==========================================================================
+
+// JOGO 1: Botão Fugitivo
+window.setupPuzzle1 = function() {
+    digitar(txtEntidade, "A pressa constrói paredes que se movem sozinhas. Somente uma aproximação cirúrgica e desacelerada pode tocar no que foge.");
+    const btn = document.createElement('button'); btn.className = 'btn-target btn-fuga'; btn.textContent = 'Avançar';
+    btn.style.left = 'calc(50% - 50px)'; btn.style.top = 'calc(50% - 20px)';
+    let ultimo = Date.now();
+    btn.addEventListener('mousemove', () => {
+        const agora = Date.now();
+        if (agora - ultimo < 40) {
+            const zona = zonaInteracao.getBoundingClientRect();
+            btn.style.left = Math.max(0, Math.random() * (zona.width - 110)) + 'px';
+            btn.style.top = Math.max(0, Math.random() * (zona.height - 44)) + 'px';
+        }
+        ultimo = agora;
+    });
+    btn.addEventListener('click', () => { AudioEngine.play(520, 0.1, 'sine'); proximoPuzzle(); });
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// mova o mouse devagar para pegar o botão';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(btn); zonaInteracao.appendChild(dica);
+};
+
+// JOGO 2: Rastro Invisível
+window.setupPuzzle2 = function() {
+    digitar(txtEntidade, "Aquilo que procuro está oculto sob a luz do dia, invisível até que você decida selecionar e revelar sua forma.");
+    const inv = document.createElement('div'); inv.className = 'invisible-text'; inv.textContent = 'O segredo é: Persistência';
+    const input = document.createElement('input'); input.className = 'input-custom'; input.placeholder = 'Digite a palavra revelada...';
+    input.addEventListener('change', () => {
+        if (input.value === 'Persistência') { proximoPuzzle(); } else { registrarErro(2); input.value = ''; }
+    });
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// arraste o mouse sobre o texto em branco acima para revelar';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(inv); zonaInteracao.appendChild(input); zonaInteracao.appendChild(dica);
+};
+
+// JOGO 3: Estado de Inércia Estendida (10 SEGUNDOS)
+// CORRIGIDO: removida variável global acidental "init = iniciar()"
+window.setupPuzzle3 = function() {
+    digitar(txtEntidade, "O sistema se alimenta da sua movimentação. Privar a tela de sinal de vida por longos instantes abrirá o portal.");
+    const info = document.createElement('div'); info.style.cssText = 'font-family:monospace; color:var(--text-dim);';
+    info.textContent = 'Fique imóvel...'; zonaInteracao.appendChild(info);
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// não mova o mouse por 10 segundos';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(dica);
+
+    let tempo = 0, loop = null;
+    const iniciar = () => {
+        loop = setInterval(() => {
+            tempo++; info.textContent = 'Fique imóvel... ' + tempo + 's / 10s';
+            if (tempo >= 10) {
+                clearInterval(loop); document.removeEventListener('mousemove', resetar);
+                info.remove(); dica.remove();
+                const btn = document.createElement('button'); btn.className = 'btn-target'; btn.textContent = 'Avançar';
+                btn.addEventListener('click', proximoPuzzle); zonaInteracao.appendChild(btn);
+            }
+        }, 1000);
+    };
+    const resetar = () => { tempo = 0; clearInterval(loop); iniciar(); };
+    iniciar(); // CORRIGIDO: era "init = iniciar()" — criava variável global acidentalmente
+    document.addEventListener('mousemove', resetar);
+};
+
+// JOGO 4: Desvio de Foco
+window.setupPuzzle4 = function() {
+    digitar(txtEntidade, "Olhar fixamente para o mesmo lugar fecha seus horizontes. Dê atenção ao mundo lá fora por um segundo e retorne.");
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// mude de aba no seu navegador e volte';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(dica);
+    const aoMudar = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', aoMudar); proximoPuzzle(); } };
+    document.addEventListener('visibilitychange', aoMudar);
+};
+
+// JOGO 5: Reflexo Superior
+window.setupPuzzle5 = function() {
+    document.title = "Senha: 40028922";
+    digitar(txtEntidade, "A verdade está escrita no ponto mais alto desta janela, onde as abas se guardam de forma discreta.");
+    const input = document.createElement('input'); input.className = 'input-custom'; input.placeholder = 'O que está escrito no topo?';
+    input.addEventListener('change', () => {
+        if (input.value === '40028922') { document.title = "Sistema Decodificado"; proximoPuzzle(); } else { registrarErro(1); input.value = ''; }
+    });
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// olhe o número escrito no título da aba do seu navegador';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(input); zonaInteracao.appendChild(dica);
+};
+
+// JOGO 6: Bloco Arrastável
+// CORRIGIDO: chave sessionStorage renomeada de 'p7_numero' para 'p6_numero' (era resto da numeração antiga)
+window.setupPuzzle6 = function() {
+    digitar(txtEntidade, "Remova o peso cinzento do caminho para expor a combinação numérica.");
+    if (!sessionStorage.getItem('p6_numero')) sessionStorage.setItem('p6_numero', Math.floor(1000 + Math.random() * 9000).toString());
+    const numeroSecreto = sessionStorage.getItem('p6_numero');
+    const pista = document.createElement('div'); pista.className = 'pista-escondida'; pista.textContent = numeroSecreto;
+    const drag = document.createElement('div'); drag.className = 'draggable-box';
+
+    let arrastando = false, offX = 0, offY = 0;
+    drag.addEventListener('mousedown', (e) => {
+        e.preventDefault(); arrastando = true;
+        const rect = drag.getBoundingClientRect(), zRect = zonaInteracao.getBoundingClientRect();
+        drag.style.transform = 'none'; drag.style.left = (rect.left - zRect.left) + 'px'; drag.style.top = (rect.top - zRect.top) + 'px';
+        offX = e.clientX - rect.left; offY = e.clientY - rect.top;
+    });
+    const mover = (e) => {
+        if (!arrastando) return;
+        const zRect = zonaInteracao.getBoundingClientRect();
+        let nx = e.clientX - offX - zRect.left, ny = e.clientY - offY - zRect.top;
+        drag.style.left = nx + 'px'; drag.style.top = ny + 'px';
+    };
+    document.addEventListener('mousemove', mover); document.addEventListener('mouseup', () => arrastando = false);
+
+    const input = document.createElement('input'); input.className = 'input-custom input-puzzle7'; input.placeholder = 'Número descoberto...';
+    input.addEventListener('change', () => {
+        if (input.value.trim() === numeroSecreto) { proximoPuzzle(); } else { registrarErro(1); input.value = ''; }
+    });
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// clique e arraste o quadrado cinza para o lado';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(pista); zonaInteracao.appendChild(drag); zonaInteracao.appendChild(input); zonaInteracao.appendChild(dica);
+};
+
+// JOGO 7: Ponto Cego
+window.setupPuzzle7 = function() {
+    digitar(txtEntidade, "O objeto centralizado é uma armadilha. O progresso reside nas bordas vazias do espaço.");
+    const btnFalso = document.createElement('button'); btnFalso.className = 'btn-target'; btnFalso.textContent = 'CLIQUE AQUI';
+    btnFalso.addEventListener('click', () => registrarErro(1)); zonaInteracao.appendChild(btnFalso);
+    const clicarFundo = (e) => { if(e.target === zonaInteracao) { zonaInteracao.removeEventListener('click', clicarFundo); proximoPuzzle(); } };
+    zonaInteracao.addEventListener('click', clicarFundo);
+    const dica = document.createElement('div'); dica.className = 'dica-empatica'; dica.textContent = '// não clique no botão, clique no espaço vazio ao redor';
+    ativarDicaComDelay(dica); zonaInteracao.appendChild(dica);
+};
+
+// JOGO 8: Sequência de Memória — grid 3x3, 5 rodadas, 3 tentativas
+window.setupPuzzle8 = function() {
+    digitar(txtEntidade, "Minha memória é perfeita. A sua? Observe a sequência que o sistema acende e repita na mesma ordem. Cinco rodadas e a barreira cede.");
+
+    const FREQS         = [261, 294, 330, 349, 392, 440, 494, 523, 587];
+    const TOTAL_RODADAS = 5;
+    const MAX_ERROS     = 3;
+
+    let sequencia = [], passo = 0, rodada = 0, bloqueado = true, erros = 0;
+
+    const info = document.createElement('div');
+    info.style.cssText = 'font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px;text-align:center;';
+    info.textContent = 'iniciando em 3...';
+
+    const grid = document.createElement('div');
+    grid.className = 'memoria-grid';
+
+    const cels = [];
+    for (let i = 0; i < 9; i++) {
+        const c = document.createElement('div');
+        c.className = 'memoria-cel';
+        c.textContent = i + 1;
+        c._idx = i;
+        cels.push(c);
+        grid.appendChild(c);
+    }
+
+    const erroInfo = document.createElement('div');
+    erroInfo.style.cssText = 'font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim);letter-spacing:1px;margin-top:8px;text-align:center;';
+    erroInfo.textContent = 'tentativas restantes: ' + MAX_ERROS;
+
+    const dica = document.createElement('div');
+    dica.className = 'dica-empatica';
+    dica.textContent = '// memorize a ordem exata das células que acendem';
+    ativarDicaComDelay(dica);
+
+    zonaInteracao.appendChild(info);
+    zonaInteracao.appendChild(grid);
+    zonaInteracao.appendChild(erroInfo);
+    zonaInteracao.appendChild(dica);
+
+    function acenderCel(idx, dur) {
+        return new Promise(res => {
+            AudioEngine.play(FREQS[idx], 0.32, 'sine', 0.04);
+            cels[idx].classList.add('aceso');
+            setTimeout(() => {
+                cels[idx].classList.remove('aceso');
+                setTimeout(res, 80);
+            }, dur);
+        });
+    }
+
+    async function exibirSequencia() {
+        bloqueado = true;
+        info.textContent = 'observe a sequência...';
+        await new Promise(r => setTimeout(r, 600));
+        for (let i = 0; i < sequencia.length; i++) {
+            await acenderCel(sequencia[i], 500);
+            await new Promise(r => setTimeout(r, 120));
+        }
+        passo = 0;
+        bloqueado = false;
+        info.textContent = 'sua vez — repita (' + sequencia.length + ' passos)';
+    }
+
+    function novaRodada() {
+        sequencia.push(Math.floor(Math.random() * 9));
+        rodada++;
+        exibirSequencia();
+    }
+
+    function tratarErro(celClicada) {
+        bloqueado = true;
+        celClicada.classList.add('errado');
+        AudioEngine.play(100, 0.4, 'sawtooth', 0.06);
+        erros++;
+        erroInfo.textContent = 'tentativas restantes: ' + (MAX_ERROS - erros);
+        setTimeout(() => {
+            celClicada.classList.remove('errado');
+            if (erros >= MAX_ERROS) {
+                registrarErro(MAX_ERROS);
+            } else {
+                sequencia = []; rodada = 0; passo = 0;
+                info.textContent = 'errou. recomeçando do zero...';
+                setTimeout(novaRodada, 900);
+            }
+        }, 700);
+    }
+
+    cels.forEach(c => {
+        c.addEventListener('click', () => {
+            if (bloqueado) return;
+            const idx = c._idx;
+            if (idx === sequencia[passo]) {
+                bloqueado = true;
+                acenderCel(idx, 280).then(() => {
+                    passo++;
+                    if (passo === sequencia.length) {
+                        if (rodada >= TOTAL_RODADAS) {
+                            info.textContent = 'memória confirmada.';
+                            cels.forEach(c2 => c2.classList.add('certo'));
+                            AudioEngine.play(800, 0.4, 'sine', 0.05);
+                            setTimeout(proximoPuzzle, 800);
+                        } else {
+                            info.textContent = 'correto! próxima rodada...';
+                            bloqueado = false;
+                            setTimeout(novaRodada, 900);
+                        }
+                    } else {
+                        bloqueado = false;
+                    }
+                });
+            } else {
+                tratarErro(c);
+            }
+        });
+    });
+
+    let conta = 3;
+    const contagem = setInterval(() => {
+        conta--;
+        if (conta > 0) {
+            info.textContent = 'iniciando em ' + conta + '...';
+        } else {
+            clearInterval(contagem);
+            novaRodada();
+        }
+    }, 1000);
+};
+
+// JOGO 9: Fragmentação Binária — sequência aleatória a cada vez
+window.setupPuzzle9 = function() {
+    digitar(txtEntidade, "Altere os estilhaços lógicos até encontrar o alinhamento binário correto.");
+
+    // Gera sequência aleatória de 4 bits que não seja 0000
+    let alvo;
+    do { alvo = Array.from({length: 4}, () => Math.floor(Math.random() * 2)); }
+    while (alvo.join('') === '0000');
+    const alvoStr = alvo.join('');
+
+    const container = document.createElement('div');
+    container.style.cssText = 'display:flex; gap:16px; align-items:center;';
+
+    const val = [0, 0, 0, 0];
+    const btns = [];
+
+    const atualizarEstilo = (btn, v) => {
+        btn.textContent = v;
+        btn.style.fontSize = '1.6rem';
+        btn.style.padding = '18px 28px';
+        btn.style.borderColor = v === 1 ? 'var(--emocao-cor)' : '';
+        btn.style.color = v === 1 ? 'var(--emocao-cor)' : '';
+        btn.style.boxShadow = v === 1 ? '0 0 14px var(--emocao-bg)' : '';
+    };
+
+    for (let i = 0; i < 4; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-target';
+        atualizarEstilo(btn, 0);
+        btn.addEventListener('click', () => {
+            val[i] = val[i] === 0 ? 1 : 0;
+            atualizarEstilo(btn, val[i]);
+            if (val.join('') === alvoStr) proximoPuzzle();
+        });
+        btns.push(btn);
+        container.appendChild(btn);
+    }
+
+    const dica = document.createElement('div');
+    dica.className = 'dica-empatica';
+    dica.textContent = '// encontre a combinação binária correta';
+    ativarDicaComDelay(dica);
+
+    zonaInteracao.appendChild(container);
+    zonaInteracao.appendChild(dica);
+};
+
+// JOGO 10: Clima Local — temperatura real de Xique-Xique BA via Open-Meteo (sem chave)
+// Latitude: -10.8228, Longitude: -42.7275
+window.setupPuzzle10 = function() {
+    digitar(txtEntidade, "O validador térmico exige que você insira a temperatura ambiente aproximada da sua região em °C.");
+
+    let temperaturaReal = null;
+
+    const loading = document.createElement('div');
+    loading.style.cssText = 'font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;text-align:center;';
+    loading.textContent = 'obtendo temperatura local...';
+
+    const input = document.createElement('input');
+    input.className = 'input-custom';
+    input.type = 'number';
+    input.placeholder = 'Ex: 32';
+    input.style.userSelect = 'text';
+    input.style.pointerEvents = 'all';
+
+    const btnConfirmar = document.createElement('button');
+    btnConfirmar.className = 'btn-target';
+    btnConfirmar.textContent = 'CONFIRMAR';
+    btnConfirmar.style.opacity = '0.4';
+    btnConfirmar.style.pointerEvents = 'none';
+
+    const dica = document.createElement('div');
+    dica.className = 'dica-empatica';
+    dica.textContent = '// consulte a temperatura atual de Xique-Xique BA e insira aqui';
+
+    ativarDicaComDelay(dica);
+    zonaInteracao.appendChild(loading);
+    zonaInteracao.appendChild(input);
+    zonaInteracao.appendChild(btnConfirmar);
+    zonaInteracao.appendChild(dica);
+
+    const validar = () => {
+        if (temperaturaReal === null) return;
+        const valorDigitado = parseInt(input.value, 10);
+        if (Math.abs(valorDigitado - temperaturaReal) <= 1) {
+            AudioEngine.play(600, 0.2);
+            proximoPuzzle();
+        } else {
+            registrarErro(1);
+            input.value = '';
+            alert('Flutuação térmica incorreta. Tente aproximar melhor a sensação local.');
+        }
+    };
+
+    // Open-Meteo: gratuito, sem chave, coordenadas de Xique-Xique BA
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=-10.8228&longitude=-42.7275&current_weather=true')
+        .then(r => r.json())
+        .then(data => {
+            temperaturaReal = Math.round(data.current_weather.temperature);
+            loading.textContent = 'validador térmico pronto.';
+            btnConfirmar.style.opacity = '1';
+            btnConfirmar.style.pointerEvents = 'all';
+        })
+        .catch(() => {
+            temperaturaReal = 32;
+            loading.textContent = 'validador térmico pronto (modo offline).';
+            btnConfirmar.style.opacity = '1';
+            btnConfirmar.style.pointerEvents = 'all';
+        });
+
+    // Enter no input também confirma
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') validar(); });
+    btnConfirmar.addEventListener('click', validar);
+};
+
+// JOGO 11: Dimensão Contraída
+// Botão começa fora da tela à direita; Ctrl+Scroll o desliza para dentro.
+window.setupPuzzle11 = function() {
+    digitar(txtEntidade, "Minha existência transborda os limites que você enxerga. O botão de acesso existe além das bordas do que você vê agora. Contraia a realidade — encolha o mundo com Ctrl e o scroll do mouse até que o invisível se revele.");
+
+    const instrucao = document.createElement('div');
+    instrucao.style.cssText = 'font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);letter-spacing:1px;text-align:center;line-height:2.2;';
+    instrucao.innerHTML =
+        'o botão está além da borda direita da tela' +
+        '<br><span style="color:var(--text-mid)">[ Ctrl + scroll ↓ para revelar ]</span>' +
+        '<br><span style="font-size:0.6rem;color:#2a2a2a">distância: <span id="p11-dist">máxima</span></span>';
+    zonaInteracao.appendChild(instrucao);
+
+    const dica = document.createElement('div');
+    dica.className = 'dica-empatica';
+    dica.textContent = '// segure Ctrl e role o scroll do mouse para baixo';
+    ativarDicaComDelay(dica);
+    zonaInteracao.appendChild(dica);
+
+    const LARGURA_BTN = 180;
+    const PASSO_PX    = 40;
+    let posLeft = window.innerWidth + 80;
+
+    const btn = document.createElement('button');
+    btn.id = 'p11-btn';
+    btn.className = 'btn-target';
+    btn.textContent = 'ACESSAR NÚCLEO';
+    btn.style.cssText = [
+        'position:fixed',
+        'top:50%',
+        'margin-top:-20px',
+        'left:' + posLeft + 'px',
+        'z-index:999999',
+        'white-space:nowrap',
+        'pointer-events:auto',
+        'transition:left 0.15s ease'
+    ].join(';');
+    document.body.appendChild(btn);
+
+    btn.addEventListener('click', () => {
+        limpar();
+        AudioEngine.play(650, 0.15, 'sine', 0.04);
+        proximoPuzzle();
+    });
+
+    function atualizar() {
+        btn.style.left = posLeft + 'px';
+        const lbl = document.getElementById('p11-dist');
+        if (lbl) {
+            const dist = posLeft - window.innerWidth;
+            lbl.textContent = dist > 0
+                ? Math.round(dist) + 'px além da borda'
+                : 'visível';
+            lbl.style.color = dist <= 0 ? 'var(--accent)' : '#2a2a2a';
+        }
+        AudioEngine.play(150 + Math.max(0, (window.innerWidth - posLeft) * 0.5), 0.03, 'sine', 0.02);
+    }
+
+    const onWheel = (e) => {
+        if (!e.ctrlKey) return;
+        e.preventDefault();
+        if (e.deltaY > 0) {
+            posLeft = Math.max(window.innerWidth - LARGURA_BTN - 40, posLeft - PASSO_PX);
+        } else {
+            posLeft = Math.min(window.innerWidth + 200, posLeft + PASSO_PX);
+        }
+        atualizar();
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+
+    function limpar() {
+        window.removeEventListener('wheel', onWheel);
+        const b = document.getElementById('p11-btn');
+        if (b) b.remove();
+    }
+
+    const obs = new MutationObserver(() => {
+        if (!zonaInteracao.contains(instrucao)) { limpar(); obs.disconnect(); }
+    });
+    obs.observe(zonaInteracao, { childList: true });
+};
+
+// JOGO 12: O PARADOXO DO ECO FINAL — 5 camadas
+//
+// CAMADA 1: sistema mostra SEQ1 (5 símbolos únicos) → jogador repete na ordem
+// CAMADA 2: sistema mostra SEQ2 (nova sequência, com repetição) → jogador repete AO CONTRÁRIO
+// CAMADA 3: 3 rodadas de 3 símbolos piscam rapidamente; 1 símbolo aparece nas 3 rodadas → jogador o identifica
+// CAMADA 4: grade 5x5 embaralhada → clicar nos símbolos da SEQ1 em ordem, ignorando os distratores
+// CAMADA 5: campo de texto → digitar SEQ1 + SEQ2 concatenados (sem espaço)
+//
+window.setupPuzzle12 = function() {
+    digitar(txtEntidade, "Você chegou ao núcleo. Mas ele não se rende facilmente. Cinco camadas de verificação separam você do segredo. Observe. Memorize. Inverta. Encontre. Escreva.");
+
+    const SIMBOLOS = ['◈', '⬡', '⟁', '◎', '⬢'];
+    const CORES    = ['#ff2d2d', '#3de8ff', '#39ff85', '#ffb830', '#8844ff'];
+
+    // SEQ1 — 5 símbolos únicos em ordem aleatória (camadas 1, 4 e 5)
+    const SEQ1 = [0,1,2,3,4].sort(() => Math.random() - 0.5);
+
+    // SEQ2 — 5 símbolos com repetição permitida, nova sequência (camadas 2 e 5)
+    const SEQ2 = Array.from({length:5}, () => Math.floor(Math.random() * 5));
+
+    let errosLocais = 0;
+
+    // ── DOM base ─────────────────────────────────────────────────────────────
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;';
+    zonaInteracao.appendChild(wrap);
+
+    const infoFase = document.createElement('div');
+    infoFase.style.cssText = 'font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;text-align:center;';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'font-family:var(--font-mono);font-size:0.72rem;color:var(--text-mid);letter-spacing:1px;text-align:center;min-height:1.4rem;';
+
+    const display = document.createElement('div');
+    display.style.cssText = 'display:flex;gap:14px;align-items:center;justify-content:center;min-height:72px;flex-wrap:wrap;';
+
+    const botoesWrap = document.createElement('div');
+    botoesWrap.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;';
+
+    wrap.appendChild(infoFase);
+    wrap.appendChild(display);
+    wrap.appendChild(info);
+    wrap.appendChild(botoesWrap);
+
+    // ── utilidades ───────────────────────────────────────────────────────────
+    const limparDisplay = () => { display.innerHTML = ''; };
+    const limparBotoes  = () => { botoesWrap.innerHTML = ''; };
+
+    function mostrarSimbolo(idx, dur) {
+        return new Promise(res => {
+            limparDisplay();
+            const s = document.createElement('span');
+            s.textContent = SIMBOLOS[idx];
+            s.style.cssText = 'font-size:3.2rem;color:'+CORES[idx]+';text-shadow:0 0 28px '+CORES[idx]+';transition:opacity 0.12s;';
+            display.appendChild(s);
+            AudioEngine.play(260 + idx * 90, 0.22, 'sine', 0.04);
+            setTimeout(() => { s.style.opacity = '0'; setTimeout(res, 110); }, dur);
+        });
+    }
+
+    function mostrarErro(msg) {
+        errosLocais++;
+        info.style.color = 'var(--accent)';
+        info.textContent = msg + '  [erro ' + errosLocais + ']';
+        AudioEngine.play(90, 0.35, 'sawtooth', 0.06);
+        setTimeout(() => { info.style.color = 'var(--text-mid)'; }, 1300);
+    }
+
+    function pulsar(btn, idx) {
+        btn.style.boxShadow = '0 0 20px ' + CORES[idx];
+        AudioEngine.play(260 + idx * 90, 0.12, 'sine', 0.03);
+        setTimeout(() => { btn.style.boxShadow = ''; }, 320);
+    }
+
+    function criarBotoesSimbolos(onClickFn) {
+        limparBotoes();
+        for (let i = 0; i < 5; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-target';
+            btn.textContent = SIMBOLOS[i];
+            btn.style.cssText = 'font-size:1.5rem;padding:14px 18px;color:'+CORES[i]+';border-color:'+CORES[i]+'44;';
+            btn.addEventListener('click', () => onClickFn(i, btn));
+            botoesWrap.appendChild(btn);
+        }
+    }
+
+    // ── CAMADA 1 ─────────────────────────────────────────────────────────────
+    async function camada1() {
+        limparBotoes(); limparDisplay();
+        infoFase.textContent = '— camada 1 de 5 — sequência direta —';
+        info.textContent = 'observe a sequência...';
+        await new Promise(r => setTimeout(r, 800));
+
+        for (const idx of SEQ1) {
+            await mostrarSimbolo(idx, 520);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        limparDisplay();
+
+        let passo = 0;
+        info.textContent = 'repita na mesma ordem (' + SEQ1.length + ' símbolos)';
+
+        criarBotoesSimbolos((i, btn) => {
+            if (i === SEQ1[passo]) {
+                pulsar(btn, i); passo++;
+                info.textContent = 'correto... ' + passo + '/' + SEQ1.length;
+                if (passo === SEQ1.length) {
+                    info.textContent = 'camada 1 desbloqueada ✓';
+                    limparBotoes();
+                    setTimeout(camada2, 1100);
+                }
+            } else {
+                mostrarErro('ordem errada — repita');
+                passo = 0;
+            }
+        });
+    }
+
+    // ── CAMADA 2 ─────────────────────────────────────────────────────────────
+    // Mostra SEQ2; jogador repete AO CONTRÁRIO
+    async function camada2() {
+        limparBotoes(); limparDisplay();
+        infoFase.textContent = '— camada 2 de 5 — inversão —';
+        info.textContent = 'observe esta nova sequência...';
+        await new Promise(r => setTimeout(r, 800));
+
+        for (const idx of SEQ2) {
+            await mostrarSimbolo(idx, 520);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        limparDisplay();
+
+        const invertida = [...SEQ2].reverse();
+        let passo = 0;
+        info.textContent = 'agora repita AO CONTRÁRIO (' + invertida.length + ' símbolos)';
+
+        const tentativa = () => {
+            limparBotoes();
+            passo = 0;
+            criarBotoesSimbolos((i, btn) => {
+                if (i === invertida[passo]) {
+                    pulsar(btn, i); passo++;
+                    info.textContent = 'correto... ' + passo + '/' + invertida.length;
+                    if (passo === invertida.length) {
+                        info.textContent = 'camada 2 desbloqueada ✓';
+                        limparBotoes();
+                        setTimeout(camada3, 1100);
+                    }
+                } else {
+                    mostrarErro('ordem errada — observe novamente');
+                    limparBotoes();
+                    setTimeout(async () => {
+                        info.textContent = 'observe novamente...';
+                        await new Promise(r => setTimeout(r, 600));
+                        for (const idx of SEQ2) {
+                            await mostrarSimbolo(idx, 520);
+                            await new Promise(r => setTimeout(r, 200));
+                        }
+                        limparDisplay();
+                        info.textContent = 'repita AO CONTRÁRIO';
+                        tentativa();
+                    }, 900);
+                }
+            });
+        };
+        tentativa();
+    }
+
+    // ── CAMADA 3 ─────────────────────────────────────────────────────────────
+    // 3 rodadas de 3 símbolos piscam; 1 símbolo está em todas as rodadas
+    async function camada3() {
+        limparBotoes(); limparDisplay();
+        infoFase.textContent = '— camada 3 de 5 — interseção —';
+        info.textContent = 'três sequências vão aparecer. um símbolo estará em todas.';
+        await new Promise(r => setTimeout(r, 1500));
+
+        const comum = Math.floor(Math.random() * 5);
+        const rounds = [];
+        for (let r = 0; r < 3; r++) {
+            const outros = [0,1,2,3,4].filter(x => x !== comum).sort(() => Math.random() - 0.5).slice(0, 2);
+            rounds.push([...outros, comum].sort(() => Math.random() - 0.5));
+        }
+
+        for (let r = 0; r < 3; r++) {
+            info.textContent = 'sequência ' + (r+1) + ' de 3...';
+            await new Promise(re => setTimeout(re, 600));
+            for (const idx of rounds[r]) {
+                await mostrarSimbolo(idx, 400);
+                await new Promise(re => setTimeout(re, 150));
+            }
+            limparDisplay();
+            if (r < 2) {
+                info.textContent = 'próxima em 1s...';
+                await new Promise(re => setTimeout(re, 900));
+            }
+        }
+
+        info.textContent = 'qual símbolo apareceu nas 3 sequências?';
+        criarBotoesSimbolos((i, btn) => {
+            if (i === comum) {
+                pulsar(btn, i);
+                info.textContent = 'camada 3 desbloqueada ✓';
+                limparBotoes();
+                setTimeout(camada4, 1100);
+            } else {
+                mostrarErro('não é esse — tente novamente');
+            }
+        });
+    }
+
+    // ── CAMADA 4 ─────────────────────────────────────────────────────────────
+    // Grade 5x5 embaralhada; clicar só nos da SEQ1 em ordem
+    function camada4() {
+        limparBotoes(); limparDisplay();
+        infoFase.textContent = '— camada 4 de 5 — grade de extração —';
+        info.textContent = 'encontre os símbolos da PRIMEIRA sequência na ordem certa';
+
+        // 5 células corretas (SEQ1) + 20 distratores
+        const celulas = SEQ1.map(idx => ({ idx, real: true }));
+        while (celulas.length < 25) celulas.push({ idx: Math.floor(Math.random() * 5), real: false });
+        celulas.sort(() => Math.random() - 0.5);
+
+        const grade = document.createElement('div');
+        grade.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;max-width:300px;';
+
+        let passo = 0;
+        celulas.forEach(cel => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-target';
+            btn.textContent = SIMBOLOS[cel.idx];
+            btn.style.cssText = 'font-size:1.1rem;padding:10px 4px;color:'+CORES[cel.idx]+';border-color:'+CORES[cel.idx]+'33;';
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                if (cel.real && cel.idx === SEQ1[passo]) {
+                    pulsar(btn, cel.idx);
+                    btn.style.opacity = '0.25';
+                    btn.disabled = true;
+                    passo++;
+                    info.textContent = passo + '/' + SEQ1.length + ' encontrados';
+                    if (passo === SEQ1.length) {
+                        info.textContent = 'camada 4 desbloqueada ✓';
+                        setTimeout(camada5, 1100);
+                    }
+                } else {
+                    mostrarErro('errado ou fora de ordem — recomeçando grade');
+                    grade.querySelectorAll('button').forEach(b => { b.style.opacity = '1'; b.disabled = false; });
+                    passo = 0;
+                }
+            });
+            grade.appendChild(btn);
+        });
+
+        limparBotoes();
+        botoesWrap.appendChild(grade);
+    }
+
+    // ── CAMADA 5 ─────────────────────────────────────────────────────────────
+    // Digitar SEQ1 + SEQ2 concatenados
+    function camada5() {
+        limparBotoes(); limparDisplay();
+        infoFase.textContent = '— camada 5 de 5 — código final —';
+
+        const respostaFinal = SEQ1.map(i => SIMBOLOS[i]).join('') + SEQ2.map(i => SIMBOLOS[i]).join('');
+
+        const label = document.createElement('div');
+        label.style.cssText = 'font-family:var(--font-mono);font-size:0.62rem;color:var(--text-dim);letter-spacing:2px;text-align:center;line-height:2;';
+        label.innerHTML = 'combine: <span style="color:#39ff85">sequência 1</span> + <span style="color:#3de8ff">sequência 2</span> (sem espaço)';
+
+        // referência clicável: SEQ1 | SEQ2
+        const ref = document.createElement('div');
+        ref.style.cssText = 'display:flex;gap:6px;font-size:1.3rem;justify-content:center;flex-wrap:wrap;margin:4px 0;align-items:center;';
+        [...SEQ1, ...SEQ2].forEach((idx, pos) => {
+            if (pos === 5) {
+                const sep = document.createElement('span');
+                sep.textContent = '|';
+                sep.style.cssText = 'color:#333;font-size:1rem;';
+                ref.appendChild(sep);
+            }
+            const s = document.createElement('span');
+            s.textContent = SIMBOLOS[idx];
+            s.style.cssText = 'color:'+CORES[idx]+';cursor:pointer;user-select:none;opacity:'+(pos<5?'1':'0.6')+';';
+            s.title = 'clique para inserir';
+            s.addEventListener('click', () => { inputFinal.value += SIMBOLOS[idx]; });
+            ref.appendChild(s);
+        });
+
+        const inputFinal = document.createElement('input');
+        inputFinal.className = 'input-custom';
+        inputFinal.placeholder = 'clique nos símbolos ou cole aqui';
+        inputFinal.style.userSelect = 'text';
+        inputFinal.style.pointerEvents = 'all';
+        inputFinal.style.fontSize = '1.2rem';
+        inputFinal.style.letterSpacing = '4px';
+
+        const btnOk = document.createElement('button');
+        btnOk.className = 'btn-target';
+        btnOk.textContent = 'VERIFICAR CÓDIGO FINAL';
+
+        const validar = () => {
+            if (inputFinal.value.trim() === respostaFinal) {
+                info.textContent = 'núcleo desbloqueado.';
+                limparBotoes();
+                limparDisplay();
+                let j = 0;
+                const todos = [...SEQ1, ...SEQ2];
+                const celebrar = setInterval(() => {
+                    if (j >= todos.length) { clearInterval(celebrar); setTimeout(abrirPortal, 700); return; }
+                    const s = document.createElement('span');
+                    s.textContent = SIMBOLOS[todos[j]];
+                    s.style.cssText = 'font-size:2rem;color:'+CORES[todos[j]]+';text-shadow:0 0 24px '+CORES[todos[j]]+';margin:0 4px;';
+                    display.appendChild(s);
+                    AudioEngine.play(300 + todos[j] * 80, 0.15, 'sine', 0.04);
+                    j++;
+                }, 130);
+            } else {
+                mostrarErro('código incorreto');
+                inputFinal.value = '';
+            }
+        };
+
+        inputFinal.addEventListener('keydown', e => { if (e.key === 'Enter') validar(); });
+        btnOk.addEventListener('click', validar);
+
+        botoesWrap.appendChild(label);
+        botoesWrap.appendChild(ref);
+        botoesWrap.appendChild(inputFinal);
+        botoesWrap.appendChild(btnOk);
+        info.textContent = 'insira o código combinado das duas sequências';
+    }
+
+    // ── PORTAL: flash branco longo → segredo.html ────────────────────────────
+    function abrirPortal() {
+        const flash = document.createElement('div');
+        flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:999999;opacity:0;pointer-events:none;transition:opacity 0.5s ease;';
+        document.body.appendChild(flash);
+        AudioEngine.play(1200, 2.5, 'sine', 0.09);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { flash.style.opacity = '1'; });
+        });
+        // fica branco por 3s antes de redirecionar
+        setTimeout(() => { window.location.href = 'segredo.html'; }, 3200);
+    }
+
+    // inicia
+    camada1();
+};
+
+// ==========================================================================
+// TELA FINAL / VITÓRIA
+// ==========================================================================
+function renderizarGaleriaFinal() {
+    cancelarTimersDica();
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:999999;opacity:0;pointer-events:none;transition:opacity 0.5s ease;';
+    document.body.appendChild(flash);
+    AudioEngine.play(1200, 2.5, 'sine', 0.09);
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => { flash.style.opacity = '1'; });
+    });
+    setTimeout(() => { window.location.href = 'segredo.html'; }, 3200);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    Balao.init();
+    if(landingScreen) {
+        landingScreen.querySelector('button')?.addEventListener('click', () => {
+            landingScreen.classList.add('hidden'); if(containerApp) containerApp.classList.remove('hidden');
+            estado_jogo.puzzleAtual = 1; renderizarPuzzle();
+        });
+    }
+});

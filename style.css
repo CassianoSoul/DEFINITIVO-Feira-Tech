@@ -1,0 +1,804 @@
+/* ==========================================================================
+   VARIÁVEIS GLOBAIS — SISTEMA VIVO
+   ========================================================================== */
+:root {
+    --bg:            #060608;
+    --surface:       #0c0c10;
+    --border:        #1a1a24;
+    --text:          #e8e8e0;
+    --text-dim:      #3a3a48;
+    --text-mid:      #787880;
+    --accent:        #ff2d2d;
+    --accent-dim:    rgba(255, 45, 45, 0.15);
+    --accent-glow:   rgba(255, 45, 45, 0.4);
+    --green:         #39ff85;
+    --amber:         #ffb830;
+    --blue:          #3de8ff;
+
+    --font-display:  'Syne', sans-serif;
+    --font-mono:     'Share Tech Mono', monospace;
+    --font-body:     'DM Sans', sans-serif;
+
+    --transition:    0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --emocao-cor:    var(--accent);
+    --emocao-bg:     var(--accent-dim);
+}
+
+/* ==========================================================================
+   RESET + BASE
+   ========================================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: clip;
+    position: relative;
+    transition: background-color 2s ease, color 1.5s ease;
+}
+
+.hidden { display: none !important; }
+
+/* ==========================================================================
+   CANVAS DE FUNDO (partículas)
+   ========================================================================== */
+#bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.45;
+}
+
+/* ==========================================================================
+   CRT + RUÍDO
+   ========================================================================== */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+    );
+    z-index: 9000;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+}
+
+/* ==========================================================================
+   ROSTO EMOCIONAL
+   ========================================================================== */
+#face-widget {
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 8000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(10,10,14,0.85);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--emocao-cor);
+    padding: 10px 14px 8px;
+    backdrop-filter: blur(8px);
+    transition: border-color 1.5s ease;
+    min-width: 90px;
+}
+
+#face-eyes {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-mid);
+    letter-spacing: 4px;
+}
+
+#face-mouth {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--emocao-cor);
+    letter-spacing: 1px;
+    transition: color 1.5s ease;
+}
+
+#emocao-label {
+    font-family: var(--font-mono);
+    font-size: 0.45rem;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+/* ==========================================================================
+   BALÃO DE FALA
+   ========================================================================== */
+#speech-bubble {
+    position: fixed;
+    top: 130px;
+    right: 22px;
+    z-index: 8100;
+    background: rgba(10,10,14,0.92);
+    border: 1px solid var(--emocao-cor);
+    border-radius: 2px;
+    padding: 10px 30px 10px 12px;
+    max-width: 200px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px var(--emocao-bg);
+    transition: box-shadow 1.5s ease, border-color 1.5s ease;
+}
+
+#speech-bubble::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 24px;
+    width: 10px;
+    height: 10px;
+    background: var(--emocao-cor);
+    transform: rotate(45deg);
+    transition: background 1.5s ease;
+}
+
+#bubble-text {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text);
+    letter-spacing: 0.5px;
+    line-height: 1.6;
+}
+
+#bubble-close {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+#bubble-close:hover { color: var(--text); }
+
+/* ==========================================================================
+   LANDING SCREEN
+   ========================================================================== */
+#landing-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+    z-index: 1000;
+    position: relative;
+}
+
+/* Linhas de grade decorativas no fundo da landing */
+#landing-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255,45,45,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,45,45,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+.terminal-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    padding: 44px 52px;
+    background: rgba(6,6,8,0.96);
+    position: relative;
+    max-width: 480px;
+    width: 90%;
+    text-align: center;
+    font-family: var(--font-mono);
+    color: var(--text-mid);
+    line-height: 1.6;
+    box-shadow:
+        0 0 60px rgba(255,45,45,0.05),
+        inset 0 0 40px rgba(0,0,0,0.4);
+}
+
+.terminal-scanline {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.7;
+    animation: scanDown 4s linear infinite;
+}
+
+@keyframes scanDown {
+    0%   { top: 0; opacity: 0.7; }
+    100% { top: 100%; opacity: 0; }
+}
+
+.terminal-box::before {
+    content: '// ACESSO RESTRITO';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    background: var(--bg);
+    padding: 0 8px;
+    letter-spacing: 2px;
+}
+
+.terminal-desc {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    line-height: 1.8;
+}
+
+.terminal-stats {
+    display: flex;
+    gap: 20px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    width: 100%;
+    justify-content: center;
+}
+
+.terminal-stats span {
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.terminal-stats em {
+    font-style: normal;
+    color: var(--accent);
+    margin-left: 4px;
+}
+
+.blink {
+    color: var(--accent);
+    animation: blink-anim 0.9s step-end infinite;
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+}
+
+@keyframes blink-anim { 50% { opacity: 0; } }
+
+/* ==========================================================================
+   APP CONTAINER — mantido exatamente como estava para não bugar fases
+   ========================================================================== */
+#app-container {
+    width: 92%;
+    max-width: 960px;
+    height: 820px;
+    display: flex;
+    flex-direction: column;
+    padding: 36px 44px 28px;
+    border: 1px solid var(--border);
+    position: relative;
+    background: rgba(8,8,12,0.97);
+    backdrop-filter: blur(6px);
+    transition: border-color 1.5s ease, box-shadow 1.5s ease;
+    overflow: visible;
+    z-index: 100;
+    box-shadow:
+        0 0 80px rgba(0,0,0,0.8),
+        0 0 1px rgba(255,255,255,0.03) inset;
+}
+
+#app-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: var(--emocao-cor);
+    opacity: 0.8;
+    transition: background 1.5s ease;
+    pointer-events: none;
+}
+
+/* Canto decorativo */
+#app-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 40px; height: 40px;
+    border-bottom: 1px solid var(--emocao-cor);
+    border-right: 1px solid var(--emocao-cor);
+    opacity: 0.4;
+    transition: border-color 1.5s ease;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   HEADER NARRATIVO
+   ========================================================================== */
+.narrative-header {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+}
+
+.entidade-texto,
+#entidade-texto {
+    font-family: var(--font-display);
+    font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--text);
+    transition: color 1.5s ease;
+    letter-spacing: 0.01em;
+}
+
+.entidade-texto::after,
+#entidade-texto::after {
+    content: '▮';
+    color: var(--emocao-cor);
+    animation: blink-anim 0.8s step-end infinite;
+    font-size: 0.75em;
+    margin-left: 3px;
+    transition: color 1.5s ease;
+}
+.entidade-texto.done::after,
+#entidade-texto.done::after { display: none; }
+
+.subtext {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* ==========================================================================
+   ZONA DE INTERAÇÃO
+   ========================================================================== */
+#interaction-zone,
+.interaction-zone {
+    flex: 1;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 8px;
+    gap: 12px;
+}
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+.btn-target {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--text-mid);
+    padding: 12px 26px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    transition: background var(--transition), color var(--transition),
+                border-color var(--transition), box-shadow var(--transition);
+    overflow: hidden;
+    white-space: nowrap;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.btn-target::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--emocao-cor);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+    z-index: -1;
+}
+
+.btn-target:hover {
+    border-color: var(--emocao-cor);
+    color: var(--bg);
+    box-shadow: 0 0 18px var(--emocao-bg);
+}
+
+.btn-target:hover::before { transform: scaleX(1); }
+.btn-target:active { transform: scale(0.97); }
+
+/* Botão fugitivo */
+.btn-fuga {
+    position: absolute;
+    left: calc(50% - 50px);
+    top: calc(50% - 20px);
+    transform: none;
+}
+
+/* ==========================================================================
+   INPUT
+   ========================================================================== */
+.input-custom {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--text-mid);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    padding: 8px 4px;
+    text-align: center;
+    outline: none;
+    width: 72%;
+    letter-spacing: 2px;
+    transition: border-color 0.25s ease;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.input-custom:focus {
+    border-bottom-color: var(--emocao-cor);
+    box-shadow: 0 2px 0 0 var(--emocao-bg);
+}
+
+.input-custom::placeholder {
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    font-size: 0.78rem;
+}
+
+/* ==========================================================================
+   PUZZLE 6 — BLOCO ARRASTÁVEL
+   ========================================================================== */
+.pista-escondida {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent);
+    letter-spacing: 6px;
+    z-index: 5;
+    pointer-events: none;
+    user-select: none;
+}
+
+.draggable-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 110px;
+    height: 70px;
+    background: rgba(6,6,8,0.98);
+    border: 2px dashed var(--accent);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: move;
+    z-index: 20;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.draggable-box:hover { border-color: var(--amber); }
+
+.input-puzzle7 {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    width: 72%;
+}
+
+/* ==========================================================================
+   PUZZLE 2 — TEXTO INVISÍVEL
+   ========================================================================== */
+.invisible-text {
+    opacity: 0.03;
+    color: var(--text);
+    cursor: text;
+    user-select: text !important;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    border: 1px dashed rgba(255,255,255,0.04);
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 10;
+}
+
+.invisible-text::selection {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* ==========================================================================
+   GRID DE MEMÓRIA (puzzle 8)
+   ========================================================================== */
+.memoria-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 220px;
+    position: relative;
+    z-index: 10;
+}
+
+.memoria-cel {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+}
+
+.memoria-cel:hover   { border-color: var(--text-mid); }
+.memoria-cel.aceso   { background: var(--emocao-cor); border-color: var(--emocao-cor); color: var(--bg); }
+.memoria-cel.errado  { background: #2a0000; border-color: var(--accent); }
+.memoria-cel.certo   { background: rgba(57,255,133,0.15); border-color: var(--green); }
+
+/* ==========================================================================
+   STATUS BAR
+   ========================================================================== */
+.status-bar {
+    margin-top: 16px;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    gap: 10px;
+}
+
+.progress-container {
+    flex: 1;
+    height: 1px;
+    background: #111116;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--emocao-cor);
+    transition: width 0.6s ease, background 1.5s ease;
+    box-shadow: 0 0 6px var(--emocao-cor);
+}
+
+#status-text {
+    flex-shrink: 0;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   DICA EMPÁTICA
+   ========================================================================== */
+.dica-empatica {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: transparent;
+    text-align: center;
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: opacity 2s ease, color 2s ease;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    line-height: 1.6;
+}
+.dica-empatica.visivel {
+    opacity: 1;
+    color: rgba(57,255,133,0.45);
+}
+
+/* ==========================================================================
+   FASES EMOCIONAIS
+   ========================================================================== */
+body.emocao-provocador  { --emocao-cor: #ff2d2d; --emocao-bg: rgba(255,45,45,0.1); }
+body.emocao-brincalhao  { --emocao-cor: #ffb830; --emocao-bg: rgba(255,184,48,0.1); }
+body.emocao-competitivo { --emocao-cor: #ff7b00; --emocao-bg: rgba(255,123,0,0.1); }
+body.emocao-irritado    { --emocao-cor: #ff1a1a; --emocao-bg: rgba(255,26,26,0.15); }
+body.emocao-cansado     { --emocao-cor: #6a6a6a; --emocao-bg: rgba(106,106,106,0.1); }
+body.emocao-defensivo   { --emocao-cor: #8844ff; --emocao-bg: rgba(136,68,255,0.1); }
+body.emocao-vulneravel  { --emocao-cor: #3de8ff; --emocao-bg: rgba(61,232,255,0.08); }
+body.emocao-triste      { --emocao-cor: #4488ff; --emocao-bg: rgba(68,136,255,0.08); }
+body.emocao-sincero     { --emocao-cor: #39ff85; --emocao-bg: rgba(57,255,133,0.08); }
+body.emocao-arrogante   { --emocao-cor: #ff2d2d; --emocao-bg: rgba(255,45,45,0.18); }
+body.emocao-arrogante #app-container { border-color: rgba(255,45,45,0.4); }
+body.emocao-empatico    { --emocao-cor: #39ff85; --emocao-bg: rgba(57,255,133,0.12); }
+body.emocao-empatico #app-container  { border-color: rgba(57,255,133,0.3); }
+
+/* ==========================================================================
+   SHAKE / ERRO
+   ========================================================================== */
+.shake { animation: errShake 0.3s ease-in-out; }
+
+@keyframes errShake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-6px) rotate(-0.3deg); }
+    40%     { transform: translateX(6px)  rotate(0.3deg); }
+    60%     { transform: translateX(-4px); }
+    80%     { transform: translateX(4px); }
+}
+
+/* ==========================================================================
+   UTILITÁRIOS
+   ========================================================================== */
+.contador-erros {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.eco-display {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    letter-spacing: 6px;
+    color: var(--accent);
+    min-height: 28px;
+    text-transform: uppercase;
+    transition: color 0.5s ease;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+/* scroll lateral puzzle 11 */
+.interaction-zone.scroll-lateral {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0;
+}
+
+/* ==========================================================================
+   OVERLAY DE ERRO / DERROTA + RISADAS
+   ========================================================================== */
+.overlay-erro-sistema {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,0,0,0.97);
+    z-index: 99990;
+    overflow: hidden;
+}
+
+.msg-erro-sistema {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-weight: 700;
+    text-align: center;
+    width: 80%;
+    max-width: 580px;
+    letter-spacing: 2px;
+    z-index: 100001;
+    animation: pulseText 0.4s infinite alternate;
+}
+
+@keyframes pulseText {
+    0%   { letter-spacing: 2px; }
+    100% { letter-spacing: 5px; }
+}
+
+.risada-stream {
+    position: absolute;
+    top: -500px;
+    color: rgba(255,45,45,0.4);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: bold;
+    line-height: 1.3;
+    white-space: pre;
+    pointer-events: none;
+    animation: quedaRisada 1.8s linear infinite;
+}
+
+@keyframes quedaRisada {
+    0%   { top: -500px; opacity: 1; }
+    100% { top: 110vh;  opacity: 0; }
+}
+
+/* ==========================================================================
+   FLASH BRANCO (transições dramáticas — derrota e portal final)
+   ========================================================================== */
+.flash-undertale {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    z-index: 999999;
+    opacity: 0;
+    pointer-events: none;
+    animation: flashAnim 1.3s ease-out forwards;
+}
+
+@keyframes flashAnim {
+    0%  { opacity: 0; }
+    15% { opacity: 1; }
+    100%{ opacity: 1; }
+}
+
+/* ==========================================================================
+   DECORAÇÕES LATERAIS DO APP (linhas de canto)
+   ========================================================================== */
+.corner-tl, .corner-br {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: border-color 1.5s ease;
+}
+.corner-tl {
+    top: -1px; left: -1px;
+    border-top: 2px solid var(--emocao-cor);
+    border-left: 2px solid var(--emocao-cor);
+}
+.corner-br {
+    bottom: -1px; right: -1px;
+    border-bottom: 2px solid var(--emocao-cor);
+    border-right: 2px solid var(--emocao-cor);
+}

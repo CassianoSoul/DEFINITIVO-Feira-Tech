@@ -1,0 +1,143 @@
+/* ==========================================================================
+   GALERIA.CSS — Estilo compartilhado pelas páginas de categoria
+   ========================================================================== */
+
+:root {
+    --bg-bright:     hsl(194, 49%, 71%);
+    --text-dark:     #333333;
+    --text-mid:      #666666;
+    --font-standard: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background-color: var(--bg-bright);
+    color: var(--text-dark);
+    font-family: var(--font-standard);
+    min-height: 100vh;
+    padding: 0 0 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fade-in-soft 1.6s ease-out;
+}
+
+@keyframes fade-in-soft {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ---------- CABEÇALHO ---------- */
+.gallery-header {
+    width: 100%;
+    max-width: 1200px;
+    padding: 32px 24px 28px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.btn-back {
+    flex-shrink: 0;
+    margin-top: 4px;
+    background: none;
+    border: 1px solid hsla(0, 0%, 40%, 0.4);
+    color: var(--text-mid);
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: all 0.25s;
+    white-space: nowrap;
+}
+
+.btn-back:hover {
+    background: hsla(0,0%,100%,0.4);
+    color: var(--text-dark);
+}
+
+.gallery-header-text h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.gallery-header-text h2 {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-mid);
+    margin-top: 4px;
+}
+
+.gallery-header-text h3 {
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-top: 4px;
+    color: var(--text-mid);
+}
+
+.destaque {
+    color: hsl(50, 90%, 38%);
+    font-weight: 600;
+}
+
+/* ---------- GRID DE FOTOS ---------- */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 24px;
+}
+
+/* ---------- FOTO ---------- */
+.cat-photo {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background-color: #e0e0e0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.cat-photo:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.16);
+}
+
+/* ---------- RODAPÉ ---------- */
+.nav-footer {
+    margin-top: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.btn-restart {
+    background: none;
+    border: 1px solid hsla(0, 0%, 44%, 0.5);
+    color: var(--text-mid);
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: all 0.3s;
+}
+
+.btn-restart:hover {
+    background: hsla(0,0%,100%,0.4);
+    color: var(--text-dark);
+}
+
+/* ---------- RESPONSIVO ---------- */
+@media (max-width: 600px) {
+    .gallery-grid { grid-template-columns: 1fr; }
+    .gallery-header { flex-direction: column; gap: 12px; }
+}

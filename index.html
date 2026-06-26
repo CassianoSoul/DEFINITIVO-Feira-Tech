@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Núcleo do Sistema: Proibido</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Share+Tech+Mono&family=DM+Sans&display=swap" rel="stylesheet">
+    <meta name="google" content="notranslate">
+</head>
+<body>
+
+    <div class="overlay"></div>
+    <!-- Partículas de fundo -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Rosto emocional flutuante -->
+    <div id="face-widget">
+        <div id="face-eyes">• •</div>
+        <div id="face-mouth">>:)</div>
+        <div id="emocao-label">MODO: PROVOCADOR</div>
+    </div>
+
+    <!-- Balão de fala -->
+    <div id="speech-bubble" class="hidden">
+        <button id="bubble-close">×</button>
+        <span id="bubble-text"></span>
+    </div>
+
+    <section id="landing-screen">
+        <div class="terminal-box">
+            <div class="terminal-scanline"></div>
+            <p class="blink">> ACESSO RESTRITO DETECTADO</p>
+            <p class="terminal-desc">Este núcleo guarda informações de alto sigilo.<br>Prove que você é capaz de acessá-las.</p>
+            <div class="terminal-stats">
+                <span>FRAGMENTOS: <em>12</em></span>
+                <span>CAMADAS: <em>∞</em></span>
+                <span>RISCO: <em>MÁXIMO</em></span>
+            </div>
+            <button class="btn-target" id="btn-start">INICIAR CONEXÃO</button>
+        </div>
+    </section>
+
+    <main id="app-container" class="hidden">
+        <header class="narrative-header">
+            <h1 id="entidade-texto">Conectando...</h1>
+            <p id="entidade-subtexto" class="subtext"></p>
+        </header>
+
+        <section id="interaction-zone"></section>
+
+        <footer class="status-bar">
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-fill"></div>
+            </div>
+            <span id="status-text">Iniciando protocolo...</span>
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
