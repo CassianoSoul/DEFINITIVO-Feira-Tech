@@ -537,7 +537,7 @@ window.setupPuzzle10 = function() {
     let temperaturaReal = null;
 
     const loading = document.createElement('div');
-    loading.style.cssText = 'font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;text-align:center;';
+    loading.style.cssText = 'font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;text-align:center;max-width:90%;word-break:break-word;line-height:1.6;';
     loading.textContent = 'obtendo temperatura local...';
 
     const input = document.createElement('input');
@@ -768,8 +768,6 @@ window.setupPuzzle12 = function() {
         html+='<circle cx="'+cx+'" cy="'+cy+'" r="'+coreR.toFixed(1)+'" fill="url(#p12CoreGrad)"></circle>';
         rings.forEach((ring,idx)=>{
             const isActive=idx===currentLayer,segs=48,op=isActive?0.95:(idx<currentLayer?0.1:0.4),col=idx<currentLayer?'#5F5E5A':(isActive?'#D85A30':'#888780');
-            for(let i=0;i<segs;i++){const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2,mid=(a1+a2)/
-const isActive=idx===currentLayer,segs=48,op=isActive?0.95:(idx<currentLayer?0.1:0.4),col=idx<currentLayer?'#5F5E5A':(isActive?'#D85A30':'#888780');
             for(let i=0;i<segs;i++){const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2,mid=(a1+a2)/2;if(angleDiff(mid,ring.gapAngle)<ring.gapWidth/2)continue;const x1=cx+ring.radius*Math.cos(a1),y1=cy+ring.radius*Math.sin(a1),x2=cx+ring.radius*Math.cos(a2),y2=cy+ring.radius*Math.sin(a2);html+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="5" opacity="'+op+'"></line>';}
             if(isActive){const gx=cx+ring.radius*Math.cos(ring.gapAngle),gy=cy+ring.radius*Math.sin(ring.gapAngle);html+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="11" fill="#1D9E75" opacity="0.18"></circle>';}
         });
