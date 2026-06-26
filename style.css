@@ -88,8 +88,8 @@ body {
    ========================================================================== */
 #face-widget {
     position: fixed;
-    top: 22px;
-    right: 22px;
+    top: 12px;
+    right: 12px;
     z-index: 8000;
     display: flex;
     flex-direction: column;
@@ -98,22 +98,22 @@ body {
     background: rgba(10,10,14,0.85);
     border: 1px solid var(--border);
     border-top: 2px solid var(--emocao-cor);
-    padding: 10px 14px 8px;
+    padding: 8px 12px 6px;
     backdrop-filter: blur(8px);
     transition: border-color 1.5s ease;
-    min-width: 90px;
+    min-width: 80px;
 }
 
 #face-eyes {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-mid);
     letter-spacing: 4px;
 }
 
 #face-mouth {
     font-family: var(--font-mono);
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: var(--emocao-cor);
     letter-spacing: 1px;
     transition: color 1.5s ease;
@@ -121,7 +121,7 @@ body {
 
 #emocao-label {
     font-family: var(--font-mono);
-    font-size: 0.45rem;
+    font-size: 0.42rem;
     color: var(--text-dim);
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -133,14 +133,14 @@ body {
    ========================================================================== */
 #speech-bubble {
     position: fixed;
-    top: 130px;
-    right: 22px;
+    top: 110px;
+    right: 12px;
     z-index: 8100;
     background: rgba(10,10,14,0.92);
     border: 1px solid var(--emocao-cor);
     border-radius: 2px;
-    padding: 10px 30px 10px 12px;
-    max-width: 200px;
+    padding: 8px 28px 8px 10px;
+    max-width: 180px;
     backdrop-filter: blur(8px);
     box-shadow: 0 0 20px var(--emocao-bg);
     transition: box-shadow 1.5s ease, border-color 1.5s ease;
@@ -160,7 +160,7 @@ body {
 
 #bubble-text {
     font-family: var(--font-mono);
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     color: var(--text);
     letter-spacing: 0.5px;
     line-height: 1.6;
@@ -195,7 +195,6 @@ body {
     position: relative;
 }
 
-/* Linhas de grade decorativas no fundo da landing */
 #landing-screen::before {
     content: '';
     position: absolute;
@@ -211,13 +210,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
     border: 1px solid var(--border);
     border-top: 2px solid var(--accent);
-    padding: 44px 52px;
+    padding: clamp(24px, 4vh, 44px) clamp(24px, 4vw, 52px);
     background: rgba(6,6,8,0.96);
     position: relative;
-    max-width: 480px;
+    max-width: 380px;
     width: 90%;
     text-align: center;
     font-family: var(--font-mono);
@@ -297,21 +296,22 @@ body {
 @keyframes blink-anim { 50% { opacity: 0; } }
 
 /* ==========================================================================
-   APP CONTAINER — mantido exatamente como estava para não bugar fases
+   APP CONTAINER — responsivo, cabe na viewport
    ========================================================================== */
 #app-container {
     width: 92%;
     max-width: 960px;
-    height: 820px;
+    height: calc(100vh - 40px);
+    max-height: 820px;
     display: flex;
     flex-direction: column;
-    padding: 36px 44px 28px;
+    padding: clamp(12px, 2vh, 36px) clamp(16px, 3vw, 44px) clamp(10px, 1.5vh, 28px);
     border: 1px solid var(--border);
     position: relative;
     background: rgba(8,8,12,0.97);
     backdrop-filter: blur(6px);
     transition: border-color 1.5s ease, box-shadow 1.5s ease;
-    overflow: visible;
+    overflow: hidden;
     z-index: 100;
     box-shadow:
         0 0 80px rgba(0,0,0,0.8),
@@ -329,7 +329,6 @@ body {
     pointer-events: none;
 }
 
-/* Canto decorativo */
 #app-container::after {
     content: '';
     position: absolute;
@@ -347,15 +346,15 @@ body {
    ========================================================================== */
 .narrative-header {
     flex-shrink: 0;
-    margin-bottom: 16px;
+    margin-bottom: clamp(6px, 1.2vh, 16px);
 }
 
 .entidade-texto,
 #entidade-texto {
     font-family: var(--font-display);
-    font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+    font-size: clamp(0.75rem, 1.5vw, 1.1rem);
     font-weight: 400;
-    line-height: 1.65;
+    line-height: 1.55;
     color: var(--text);
     transition: color 1.5s ease;
     letter-spacing: 0.01em;
@@ -375,9 +374,9 @@ body {
 
 .subtext {
     font-family: var(--font-mono);
-    font-size: 0.58rem;
+    font-size: 0.55rem;
     color: var(--text-dim);
-    margin-top: 8px;
+    margin-top: 6px;
     text-transform: uppercase;
     letter-spacing: 2px;
 }
@@ -388,15 +387,16 @@ body {
 #interaction-zone,
 .interaction-zone {
     flex: 1;
+    min-height: 0;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100%;
     padding: 8px;
-    gap: 12px;
+    gap: 10px;
 }
 
 /* ==========================================================================
@@ -406,9 +406,9 @@ body {
     background: transparent;
     color: var(--text);
     border: 1px solid var(--text-mid);
-    padding: 12px 26px;
+    padding: 10px 22px;
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     letter-spacing: 2px;
     text-transform: uppercase;
     cursor: pointer;
@@ -441,7 +441,6 @@ body {
 .btn-target:hover::before { transform: scaleX(1); }
 .btn-target:active { transform: scale(0.97); }
 
-/* Botão fugitivo */
 .btn-fuga {
     position: absolute;
     left: calc(50% - 50px);
@@ -458,8 +457,8 @@ body {
     border-bottom: 1px solid var(--text-mid);
     color: var(--text);
     font-family: var(--font-mono);
-    font-size: 1rem;
-    padding: 8px 4px;
+    font-size: 0.95rem;
+    padding: 7px 4px;
     text-align: center;
     outline: none;
     width: 72%;
@@ -478,7 +477,7 @@ body {
 .input-custom::placeholder {
     color: var(--text-dim);
     letter-spacing: 1px;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
 }
 
 /* ==========================================================================
@@ -558,8 +557,8 @@ body {
 .memoria-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    width: 220px;
+    gap: 8px;
+    width: clamp(160px, 30vw, 220px);
     position: relative;
     z-index: 10;
 }
@@ -573,7 +572,7 @@ body {
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
-    font-size: 1.1rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     user-select: none;
@@ -588,10 +587,10 @@ body {
    STATUS BAR
    ========================================================================== */
 .status-bar {
-    margin-top: 16px;
+    margin-top: clamp(6px, 1vh, 16px);
     flex-shrink: 0;
     font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -629,7 +628,7 @@ body {
    ========================================================================== */
 .dica-empatica {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: transparent;
     text-align: center;
     letter-spacing: 1px;
@@ -701,7 +700,6 @@ body.emocao-empatico #app-container  { border-color: rgba(57,255,133,0.3); }
     flex-shrink: 0;
 }
 
-/* scroll lateral puzzle 11 */
 .interaction-zone.scroll-lateral {
     overflow-x: scroll;
     overflow-y: hidden;
@@ -763,7 +761,7 @@ body.emocao-empatico #app-container  { border-color: rgba(57,255,133,0.3); }
 }
 
 /* ==========================================================================
-   FLASH BRANCO (transições dramáticas — derrota e portal final)
+   FLASH BRANCO
    ========================================================================== */
 .flash-undertale {
     position: fixed;
@@ -782,7 +780,7 @@ body.emocao-empatico #app-container  { border-color: rgba(57,255,133,0.3); }
 }
 
 /* ==========================================================================
-   DECORAÇÕES LATERAIS DO APP (linhas de canto)
+   DECORAÇÕES LATERAIS DO APP
    ========================================================================== */
 .corner-tl, .corner-br {
     position: absolute;
